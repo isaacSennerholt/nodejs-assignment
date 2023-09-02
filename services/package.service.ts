@@ -2,39 +2,65 @@ import { sequelizeConnection } from '../db/config'
 import {Package} from '../models/package';
 import { Price } from '../models/price';
 
+export const getAll = async () => {
+  return await Package.findAll({
+    include: [
+      {model: Price, as: 'prices'},
+    ],
+  });
+}
+
+export const createPackage = async (name: string, priceCents: number, municipality?: string) => {
+  let newPackage: Package;
+
+  try {
+    newPackage = await sequelizeConnection.transaction(t => {
+      return Package.create({ name }, { transaction: t });
+    });
+  } catch (err: unknown) {
+    throw new Error('Error handling the transaction');
+  }
+
+  return addPackagePrice(newPackage, priceCents, municipality)
+}
+
+export const addPackagePrice = async (pack: Package, newPriceCents: number, municipality?: string) => {
+  try {
+    const newPackage = await sequelizeConnection.transaction(async t => {
+      const newPrice = await Price.create({
+        priceCents: newPriceCents,
+        ...(municipality && { municipality }),
+        packageId: pack.id,
+      }, { transaction: t });
+
+      // If the municipality is not set, then it's a default price
+      // that will be set on the package.
+      if (!newPrice.municipality) {
+        pack.priceCents = newPrice.priceCents;
+      }
+
+      return pack.save({ transaction: t });
+    });
+
+    return newPackage;
+  } catch (err: unknown) {
+    throw new Error('Error handling the transaction');
+  }
+}
+
+export const priceFor = async (packageId: Package['id'], municipality: string) => {
+  const [latestPrice] = await Price.findAll({ where: { municipality, packageId }, order: [['createdAt', 'DESC']]})
+
+  if (!latestPrice) {
+    return null;
+  }
+
+  return latestPrice.priceCents;
+}
+
 export default {
-  async getAll() {
-    return await Package.findAll({
-			include: [
-				{model: Price, as: 'prices'},
-			],
-		});
-  },
-  async updatePackagePrice(pack: Package, newPriceCents: number) {
-    try {
-      const newPackage = await sequelizeConnection.transaction(async t => {
-        await Price.create({
-          packageId: pack.id,
-          priceCents: pack.priceCents,
-        }, { transaction: t });
-
-        pack.priceCents = newPriceCents;
-
-        return pack.save({ transaction: t });
-      });
-
-      return newPackage;
-    } catch (err: unknown) {
-      throw new Error('Error handling the transaction');
-    }
-  },
-	async priceFor(municipality: string) {
-    const foundPackage = await Package.findOne({ where: { name: municipality } });
-
-    if (!foundPackage) {
-      return null;
-    }
-
-		return foundPackage.priceCents;
-	},
+  getAll,
+  createPackage,
+  addPackagePrice,
+  priceFor,
 };

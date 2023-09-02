@@ -9,7 +9,7 @@ class Package extends Model<InferAttributes<Package>, InferCreationAttributes<Pa
 
 	declare id: CreationOptional<number>;
 	declare name: string;
-	declare priceCents: number;
+	declare priceCents?: number;
 	declare prices?: NonAttribute<Price[]>;
 }
 
