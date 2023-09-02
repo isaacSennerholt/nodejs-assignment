@@ -33,7 +33,6 @@ describe('PackageService', () => {
 
 	it('Stores the price of the created package in its price history', async () => {
     const newPack = await packageService.createPackage('Dunderhonung', 100_00);
-
 		const prices = await Price.findAll({ where: { packageId: newPack.id } });
 		
 		expect(prices.length).toBe(1);

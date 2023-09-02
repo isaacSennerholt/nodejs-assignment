@@ -17,7 +17,7 @@ describe('PriceService', () => {
 	});
 
   it('Returns the pricing history for the provided year and package', async () => {
-    const basic = await Package.create({ name: 'basic', priceCents: 20_00 });
+    const basic = await PackageService.createPackage('basic', 20_00);
 
     const date = new Date();
 
@@ -35,9 +35,10 @@ describe('PriceService', () => {
       PackageService.addPackagePrice(basic, 100_00, 'Stockholm', date),
     ])
 
-    expect(await PriceService.getPriceHistory()).toBe({
-      Göteborg: [30_00],
-      Stockholm: [40_00, 100_00],
+    expect(await PriceService.getPriceHistory(basic, 2020)).toMatchObject({
+      default: expect.arrayContaining([20_00]),
+      Göteborg: expect.arrayContaining([30_00]),
+      Stockholm: expect.arrayContaining([40_00, 100_00]),
     });
   });
 
@@ -53,6 +54,8 @@ describe('PriceService', () => {
       PackageService.addPackagePrice(basic, 100_00, 'Stockholm', date),
     ]);
 
-    // Add some assertions here!
+    expect(await PriceService.getPriceHistory(basic, 2020, 'Göteborg')).toMatchObject({
+      Göteborg: expect.arrayContaining([20_00]),
+    });
   })
 });

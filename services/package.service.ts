@@ -24,13 +24,16 @@ export const createPackage = async (name: string, priceCents: number, municipali
   return addPackagePrice(newPackage, priceCents, municipality)
 }
 
-export const addPackagePrice = async (pack: Package, newPriceCents: number, municipality?: string) => {
+export const addPackagePrice = async (pack: Package, newPriceCents: number, municipality?: string, createdAt?: Date) => {
   try {
     const newPackage = await sequelizeConnection.transaction(async t => {
+      const createdAtDate = createdAt ?? new Date();
       const newPrice = await Price.create({
         priceCents: newPriceCents,
         ...(municipality && { municipality }),
         packageId: pack.id,
+        createdAt: createdAtDate,
+        updatedAt: createdAtDate,
       }, { transaction: t });
 
       // If the municipality is not set, then it's a default price
